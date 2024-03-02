@@ -19,3 +19,11 @@ function Print-Message {
 
     Write-Host "$(Get-Date) $Message"
 }
+
+function Remove-Arguments {
+    param (
+        [Parameter(Mandatory)] [string] $Text
+    )
+
+    return $Text.split("?")[0]
+}

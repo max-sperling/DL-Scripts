@@ -8,11 +8,12 @@ function Download-Playlist {
         [Parameter(Mandatory)] [string] $OutputFile
     )
 
+    $NoError = $true
     $StorageLink = $PlaylistLink.Substring(0, $PlaylistLink.LastIndexOf("/"))
     $PlaylistFile = $PlaylistLink.Substring($PlaylistLink.LastIndexOf("/")+1)
-    $NoError = $true
+    $PlaylistFileWA = Remove-Arguments $PlaylistFile
 
-    $NoError = Download-PlaylistFile $StorageLink $PlaylistFile
+    $NoError = Download-PlaylistFile $StorageLink $PlaylistFile $PlaylistFileWA
     if ($NoError) {
         Print-Message "Playlist file download successful"
     } else {
@@ -21,7 +22,7 @@ function Download-Playlist {
     }
 
     $FailedFiles = New-Object ArrayList
-    $NoError = Download-MediaFiles $PlaylistFile $StorageLink $FailedFiles
+    $NoError = Download-MediaFiles $PlaylistFileWA $StorageLink $FailedFiles
     if ($NoError) {
         Print-Message "Media files download successful"
     } else {
@@ -36,7 +37,7 @@ function Download-Playlist {
         }
     }
 
-    $NoError = Concat-MediaFiles $PlaylistFile $OutputFile
+    $NoError = Concat-MediaFiles $PlaylistFileWA $OutputFile
     if ($NoError) {
         Print-Message "Media files concat successful"
     } else {
@@ -50,15 +51,16 @@ function Download-Playlist {
 function Download-PlaylistFile {
     param (
         [Parameter(Mandatory)] [string] $StorageLink,
-        [Parameter(Mandatory)] [string] $PlaylistFile
+        [Parameter(Mandatory)] [string] $PlaylistFile,
+        [Parameter(Mandatory)] [string] $PlaylistFileWA
     )
 
     $ProgressPreference = "SilentlyContinue"
 
     try {
-        Invoke-WebRequest "$StorageLink/$PlaylistFile" -OutFile $PlaylistFile
+        Invoke-WebRequest "$StorageLink/$PlaylistFile" -OutFile $PlaylistFileWA
     } catch {
-        Print-Message "File: $StorageLink/$MediaFile, Error: $($_.Exception.Message)"
+        Print-Message "File: $StorageLink/$PlaylistFileWA, Error: $($_.Exception.Message)"
         return $false
     }
 
@@ -67,7 +69,7 @@ function Download-PlaylistFile {
 
 function Download-MediaFiles {
     param (
-        [Parameter(Mandatory)] [string] $PlaylistFile,
+        [Parameter(Mandatory)] [string] $PlaylistFileWA,
         [Parameter(Mandatory)] [string] $StorageLink,
         [Parameter(Mandatory)] [ArrayList] [AllowEmptyCollection()] $FailedFiles
     )
@@ -77,16 +79,20 @@ function Download-MediaFiles {
     $ThreadArgs = New-Object Hashtable(@{ 
         NoError = $true
         PrintMsgStr = ${function::Print-Message}.ToString()
+        RemArgsStr = ${function::Remove-Arguments}.ToString()
         InvSyncStr = ${function::Invoke-Synchronized}.ToString()
         SyncObject = [System.Object]::new()
     })
 
-    Get-Content $PlaylistFile | Where-Object {$_ -NotMatch "^#"} | ForEach-Object -Parallel {
+    Get-Content $PlaylistFileWA | Where-Object {$_ -NotMatch "^#"} | ForEach-Object -Parallel {
 
         $MediaFile = $_.Substring($_.LastIndexOf("/")+1)
 
+        ${function:Remove-Arguments} = $using:ThreadArgs.RemArgsStr
+        $MediaFileWA = Remove-Arguments $MediaFile
+
         try {
-            Invoke-WebRequest "$using:StorageLink/$MediaFile" -OutFile $MediaFile
+            Invoke-WebRequest "$using:StorageLink/$MediaFile" -OutFile $MediaFileWA
         } catch {
             ${function:Invoke-Synchronized} = $using:ThreadArgs.InvSyncStr
 
@@ -94,7 +100,7 @@ function Download-MediaFiles {
                 ($using:ThreadArgs).NoError = $false
 
                 ${function:Print-Message} = $using:ThreadArgs.PrintMsgStr
-                Print-Message "File: $using:StorageLink/$MediaFile, Error: $($_.Exception.Message)"
+                Print-Message "File: $using:StorageLink/$MediaFileWA, Error: $($_.Exception.Message)"
 
                 ($using:FailedFiles).Add($MediaFile) > $null
             }
@@ -116,14 +122,20 @@ function Download-Files {
     $ThreadArgs = New-Object Hashtable(@{ 
         NoError = $true
         PrintMsgStr = ${function::Print-Message}.ToString()
+        RemArgsStr = ${function::Remove-Arguments}.ToString()
         InvSyncStr = ${function::Invoke-Synchronized}.ToString()
         SyncObject = [System.Object]::new()
     })
 
     $FileList | ForEach-Object -Parallel {
 
+        $MediaFile = $_
+
+        ${function:Remove-Arguments} = $using:ThreadArgs.RemArgsStr
+        $MediaFileWA = Remove-Arguments $MediaFile
+
         try {
-            Invoke-WebRequest "$using:StorageLink/$_" -OutFile $_
+            Invoke-WebRequest "$using:StorageLink/$MediaFile" -OutFile $MediaFileWA
         } catch {
             ${function:Invoke-Synchronized} = $using:ThreadArgs.InvSyncStr
 
@@ -131,7 +143,7 @@ function Download-Files {
                 ($using:ThreadArgs).NoError = $false
 
                 ${function:Print-Message} = $using:ThreadArgs.PrintMsgStr
-                Print-Message "File: $using:StorageLink/$MediaFile, Error: $($_.Exception.Message)"
+                Print-Message "File: $using:StorageLink/$MediaFileWA, Error: $($_.Exception.Message)"
             }
         }
 
@@ -142,15 +154,17 @@ function Download-Files {
 
 function Concat-MediaFiles {
     param (
-        [Parameter(Mandatory)] [string] $PlaylistFile,
+        [Parameter(Mandatory)] [string] $PlaylistFileWA,
         [Parameter(Mandatory)] [string] $OutputFile
     )
 
     $Concat = "concat:"
 
-    Get-Content $PlaylistFile | Where-Object {$_ -NotMatch "^#"} | ForEach-Object {
+    Get-Content $PlaylistFileWA | Where-Object {$_ -NotMatch "^#"} | ForEach-Object {
         $MediaFile = $_.Substring($_.LastIndexOf("/")+1)
-        $Concat += "$MediaFile|"
+        $MediaFileWA = Remove-Arguments $MediaFile
+
+        $Concat += "$MediaFileWA|"
     }
 
     ffmpeg -i $Concat -c copy $OutputFile
