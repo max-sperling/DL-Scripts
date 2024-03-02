@@ -1,4 +1,4 @@
-Import-Module "$PSScriptRoot\Common.psm1"
+Import-Module "$PSScriptRoot\Common-Functions.psm1"
 
 function Download-Pattern {
     param (

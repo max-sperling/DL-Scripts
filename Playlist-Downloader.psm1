@@ -1,6 +1,6 @@
 using namespace System.Collections
 
-Import-Module "$PSScriptRoot\Common.psm1"
+Import-Module "$PSScriptRoot\Common-Functions.psm1"
 
 function Download-Playlist {
     param (
