@@ -4,8 +4,8 @@ Import-Module "$PSScriptRoot\Common-Functions.psm1"
 
 function Download-Playlist {
     param (
-        [Parameter(Mandatory)] [string] $PlaylistLink,
-        [Parameter(Mandatory)] [string] $OutputFile
+        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $PlaylistLink,
+        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $OutputFile
     )
 
     $NoError = $true
@@ -50,9 +50,9 @@ function Download-Playlist {
 
 function Download-PlaylistFile {
     param (
-        [Parameter(Mandatory)] [string] $StorageLink,
-        [Parameter(Mandatory)] [string] $PlaylistFile,
-        [Parameter(Mandatory)] [string] $PlaylistFileWA
+        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $StorageLink,
+        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $PlaylistFile,
+        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $PlaylistFileWA
     )
 
     $ProgressPreference = "SilentlyContinue"
@@ -69,9 +69,9 @@ function Download-PlaylistFile {
 
 function Download-MediaFiles {
     param (
-        [Parameter(Mandatory)] [string] $PlaylistFileWA,
-        [Parameter(Mandatory)] [string] $StorageLink,
-        [Parameter(Mandatory)] [ArrayList] [AllowEmptyCollection()] $FailedFiles
+        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $PlaylistFileWA,
+        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $StorageLink,
+        [Parameter(Mandatory)] [ArrayList] [ValidateNotNull()] [AllowEmptyCollection()] $FailedFiles
     )
 
     $ProgressPreference = "SilentlyContinue"
@@ -113,8 +113,8 @@ function Download-MediaFiles {
 
 function Download-Files {
     param (
-        [Parameter(Mandatory)] [string] $StorageLink,
-        [Parameter(Mandatory)] [ArrayList] [AllowEmptyCollection()] $FileList
+        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $StorageLink,
+        [Parameter(Mandatory)] [ArrayList] [ValidateNotNullOrEmpty()] $FileList
     )
 
     $ProgressPreference = "SilentlyContinue"
@@ -154,8 +154,8 @@ function Download-Files {
 
 function Concat-MediaFiles {
     param (
-        [Parameter(Mandatory)] [string] $PlaylistFileWA,
-        [Parameter(Mandatory)] [string] $OutputFile
+        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $PlaylistFileWA,
+        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $OutputFile
     )
 
     $Concat = "concat:"
