@@ -4,170 +4,159 @@ Import-Module "$PSScriptRoot\Common-Functions.psm1"
 
 function Download-Playlist {
     param (
-        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $PlaylistLink,
-        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $OutputFile
+        [Parameter(Mandatory)] [string] $PlaylistLink,
+        [Parameter(Mandatory)] [string] $OutputFile
     )
 
-    $NoError = $true
+    $Successful = $true
+
     $StorageLink = $PlaylistLink.Substring(0, $PlaylistLink.LastIndexOf("/"))
-    $PlaylistFile = $PlaylistLink.Substring($PlaylistLink.LastIndexOf("/")+1)
-    $PlaylistFileWA = Remove-Arguments $PlaylistFile
+    $PlaylistFileWA = $PlaylistLink.Substring($PlaylistLink.LastIndexOf("/")+1)
+    $PlaylistFile = Remove-Arguments $PlaylistFileWA
 
-    $NoError = Download-PlaylistFile $StorageLink $PlaylistFile $PlaylistFileWA
-    if ($NoError) {
-        Print-Message "Playlist file download successful"
-    } else {
-        Print-Message "Playlist file download failed"
-        return $false
-    }
+    # Download playlist file
+    $Successful = Download-PlaylistFile -MaxIterations 3 -StorageLink $StorageLink -PlaylistFileWA $PlaylistFileWA
+    if (!$Successful) { return $false }
 
-    $FailedFiles = New-Object ArrayList
-    $NoError = Download-MediaFiles $PlaylistFileWA $StorageLink $FailedFiles
-    if ($NoError) {
-        Print-Message "Media files download successful"
-    } else {
-        Print-Message "Let's download the failed files again"
+    # Download media files
+    $Successful = Download-MediaFiles -MaxIterations 3 -StorageLink $StorageLink -PlaylistFile $PlaylistFile
+    if (!$Successful) { return $false }
 
-        $NoError = Download-Files $StorageLink $FailedFiles
-        if ($NoError) {
-            Print-Message "Media files download successful"
-        } else {
-            Print-Message "Media files download failed"
-            return $false
-        }
-    }
-
-    $NoError = Concat-MediaFiles $PlaylistFileWA $OutputFile
-    if ($NoError) {
-        Print-Message "Media files concat successful"
-    } else {
-        Print-Message "Media files concat failed"
-        return $false
-    }
+    # Concat media files
+    $Successful = Concat-MediaFiles -PlaylistFile $PlaylistFile -OutputFile $OutputFile
+    if (!$Successful) { return $false }
 
     return $true
 }
 
 function Download-PlaylistFile {
     param (
-        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $StorageLink,
-        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $PlaylistFile,
-        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $PlaylistFileWA
+        [Parameter(Mandatory)] [uint32] $MaxIterations,
+        [Parameter(Mandatory)] [string] $StorageLink,
+        [Parameter(Mandatory)] [string] $PlaylistFileWA
     )
 
-    $ProgressPreference = "SilentlyContinue"
+    $Successful = $false
 
-    try {
-        Invoke-WebRequest "$StorageLink/$PlaylistFile" -OutFile $PlaylistFileWA
-    } catch {
-        Print-Message "File: $StorageLink/$PlaylistFileWA, Error: $($_.Exception.Message)"
-        return $false
+    $FileList = [ArrayList]@(
+        $PlaylistFileWA)
+
+    $FuncArgs = [Hashtable]@{
+        StorageLink = $StorageLink
+        FileList = $FileList}
+
+    $Successful = Invoke-UntilSuccessful `
+        -MaxIterations $MaxIterations `
+        -ScriptBlock ${function:Download-Files} `
+        -Arguments $FuncArgs
+
+    if ($Successful) {
+        Print-Message "Playlist file download successful"
+    } else {
+        Print-Message "Playlist file download failed"
     }
 
-    return $true
+    return $Successful
 }
 
 function Download-MediaFiles {
     param (
-        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $PlaylistFileWA,
-        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $StorageLink,
-        [Parameter(Mandatory)] [ArrayList] [ValidateNotNull()] [AllowEmptyCollection()] $FailedFiles
+        [Parameter(Mandatory)] [uint32] $MaxIterations,
+        [Parameter(Mandatory)] [string] $StorageLink,
+        [Parameter(Mandatory)] [string] $PlaylistFile
     )
 
-    $ProgressPreference = "SilentlyContinue"
+    $Successful = $false
 
-    $ThreadArgs = New-Object Hashtable(@{ 
-        NoError = $true
-        PrintMsgStr = ${function::Print-Message}.ToString()
-        RemArgsStr = ${function::Remove-Arguments}.ToString()
-        InvSyncStr = ${function::Invoke-Synchronized}.ToString()
-        SyncObject = [System.Object]::new()
-    })
+    $FileList = New-Object ArrayList
+    Get-Content $PlaylistFile | Where-Object {$_ -NotMatch "^#"} | ForEach-Object {
+        $FileList.Add($_)
+    }
 
-    Get-Content $PlaylistFileWA | Where-Object {$_ -NotMatch "^#"} | ForEach-Object -Parallel {
+    $FuncArgs = [Hashtable]@{
+        StorageLink = $StorageLink
+        FileList = $FileList}
 
-        $MediaFile = $_.Substring($_.LastIndexOf("/")+1)
+    $Successful = Invoke-UntilSuccessful `
+        -MaxIterations $MaxIterations `
+        -ScriptBlock ${function:Download-Files} `
+        -Arguments $FuncArgs
 
-        ${function:Remove-Arguments} = $using:ThreadArgs.RemArgsStr
-        $MediaFileWA = Remove-Arguments $MediaFile
+    if ($Successful) {
+        Print-Message "Media files download successful"
+    } else {
+        Print-Message "Media files download failed"
+    }
 
-        try {
-            Invoke-WebRequest "$using:StorageLink/$MediaFile" -OutFile $MediaFileWA
-        } catch {
-            ${function:Invoke-Synchronized} = $using:ThreadArgs.InvSyncStr
-
-            Invoke-Synchronized $using:ThreadArgs.SyncObject {
-                ($using:ThreadArgs).NoError = $false
-
-                ${function:Print-Message} = $using:ThreadArgs.PrintMsgStr
-                Print-Message "File: $using:StorageLink/$MediaFileWA, Error: $($_.Exception.Message)"
-
-                ($using:FailedFiles).Add($MediaFile) > $null
-            }
-        }
-
-    } -ThrottleLimit 10
-
-    return $ThreadArgs.NoError
+    return $Successful
 }
 
 function Download-Files {
     param (
-        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $StorageLink,
-        [Parameter(Mandatory)] [ArrayList] [ValidateNotNullOrEmpty()] $FileList
+        [Parameter(Mandatory)] [string] $StorageLink,
+        [Parameter(Mandatory)] [ArrayList] $FileList
     )
 
     $ProgressPreference = "SilentlyContinue"
 
-    $ThreadArgs = New-Object Hashtable(@{ 
-        NoError = $true
+    $ThreadArgs = New-Object Hashtable(@{
+        SyncObject = [System.Object]::new()
+
+        Successful = $true
+        FailedFiles = [ArrayList]::new()
+
         PrintMsgStr = ${function::Print-Message}.ToString()
         RemArgsStr = ${function::Remove-Arguments}.ToString()
         InvSyncStr = ${function::Invoke-Synchronized}.ToString()
-        SyncObject = [System.Object]::new()
     })
 
     $FileList | ForEach-Object -Parallel {
 
-        $MediaFile = $_
+        $FileWA = $_
 
         ${function:Remove-Arguments} = $using:ThreadArgs.RemArgsStr
-        $MediaFileWA = Remove-Arguments $MediaFile
+        $File = Remove-Arguments $FileWA
 
         try {
-            Invoke-WebRequest "$using:StorageLink/$MediaFile" -OutFile $MediaFileWA
+            Invoke-WebRequest "$using:StorageLink/$FileWA" -OutFile $File
         } catch {
             ${function:Invoke-Synchronized} = $using:ThreadArgs.InvSyncStr
 
             Invoke-Synchronized $using:ThreadArgs.SyncObject {
-                ($using:ThreadArgs).NoError = $false
+                ($using:ThreadArgs).Successful = $false
 
                 ${function:Print-Message} = $using:ThreadArgs.PrintMsgStr
-                Print-Message "File: $using:StorageLink/$MediaFileWA, Error: $($_.Exception.Message)"
+                Print-Message "File: $using:StorageLink/$File, Error: $($_.Exception.Message)"
+
+                ($using:ThreadArgs).FailedFiles.Add($FileWA) > $null
             }
         }
 
     } -ThrottleLimit 10
 
-    return $ThreadArgs.NoError
+    $FileList = $ThreadArgs.FailedFiles
+
+    return $ThreadArgs.Successful
 }
 
 function Concat-MediaFiles {
     param (
-        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $PlaylistFileWA,
-        [Parameter(Mandatory)] [string] [ValidateNotNullOrEmpty()] $OutputFile
+        [Parameter(Mandatory)] [string] $PlaylistFile,
+        [Parameter(Mandatory)] [string] $OutputFile
     )
 
     $Concat = "concat:"
 
-    Get-Content $PlaylistFileWA | Where-Object {$_ -NotMatch "^#"} | ForEach-Object {
-        $MediaFile = $_.Substring($_.LastIndexOf("/")+1)
-        $MediaFileWA = Remove-Arguments $MediaFile
+    Get-Content $PlaylistFile | Where-Object {$_ -NotMatch "^#"} | ForEach-Object {
+        $MediaFileWA = $_.Substring($_.LastIndexOf("/")+1)
+        $MediaFile = Remove-Arguments $MediaFileWA
 
-        $Concat += "$MediaFileWA|"
+        $Concat += "$MediaFile|"
     }
 
     ffmpeg -i $Concat -c copy $OutputFile
+
+    Print-Message "Media files concat successful"
 
     return $true
 }
