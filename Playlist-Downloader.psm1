@@ -97,8 +97,6 @@ function Download-Files {
         [Parameter(Mandatory)] [ArrayList] $FileList
     )
 
-    $ProgressPreference = "SilentlyContinue"
-
     $ThreadArgs = New-Object Hashtable(@{
         SyncObject = [System.Object]::new()
 
@@ -116,9 +114,10 @@ function Download-Files {
 
         ${function:Remove-Arguments} = $using:ThreadArgs.RemArgsStr
         $File = Remove-Arguments $FileWA
+        $FilePath = $(Get-Location).Path + "\$File"
 
         try {
-            Invoke-WebRequest "$using:StorageLink/$FileWA" -OutFile $File
+            (New-Object System.Net.WebClient).DownloadFile("$using:StorageLink/$FileWA", $FilePath)
         } catch {
             ${function:Invoke-Synchronized} = $using:ThreadArgs.InvSyncStr
 
