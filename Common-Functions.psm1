@@ -34,10 +34,18 @@ function Print-Message {
     Write-Host "$(Get-Date) $Message"
 }
 
-function Remove-Arguments {
+function Get-WithoutWebargs {
     param (
-        [Parameter(Mandatory)] [string] $Text
+        [Parameter(Mandatory)] [string] $Link
     )
 
-    return $Text.split("?")[0]
+    return $Link.split("?")[0]
+}
+
+function Get-WithoutWebpath {
+    param (
+        [Parameter(Mandatory)] [string] $Link
+    )
+
+    return $Link.Substring($Link.LastIndexOf("/") + 1)
 }

@@ -40,7 +40,7 @@ function Download-Items {
     process {
         $Items | ForEach-Object {
             Print-Message "Download File: $_"
-            $ItemName = $_.Substring($_.LastIndexOf("/")+1)
+            $ItemName = (Get-WithoutWebpath $_)
             Invoke-WebRequest $_ -OutFile $ItemName
         }
     }

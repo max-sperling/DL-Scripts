@@ -12,18 +12,18 @@ function Download-Playlist {
 
     $StorageLink = $PlaylistLink.Substring(0, $PlaylistLink.LastIndexOf("/"))
     $PlaylistFileWA = $PlaylistLink.Substring($PlaylistLink.LastIndexOf("/")+1)
-    $PlaylistFile = Remove-Arguments $PlaylistFileWA
+    $PlaylistFile = (Get-WithoutWebargs $PlaylistFileWA)
 
     # Download playlist file
-    $Successful = Download-PlaylistFile -MaxIterations 3 -StorageLink $StorageLink -PlaylistFileWA $PlaylistFileWA
+    $Successful = (Download-PlaylistFile -MaxIterations 3 -StorageLink $StorageLink -PlaylistFileWA $PlaylistFileWA)
     if (!$Successful) { return $false }
 
     # Download media files
-    $Successful = Download-MediaFiles -MaxIterations 3 -StorageLink $StorageLink -PlaylistFile $PlaylistFile
+    $Successful = (Download-MediaFiles -MaxIterations 3 -StorageLink $StorageLink -PlaylistFile $PlaylistFile)
     if (!$Successful) { return $false }
 
     # Concat media files
-    $Successful = Concat-MediaFiles -PlaylistFile $PlaylistFile -OutputFile $OutputFile
+    $Successful = (Concat-MediaFiles -PlaylistFile $PlaylistFile -OutputFile $OutputFile)
     if (!$Successful) { return $false }
 
     return $true
@@ -45,10 +45,7 @@ function Download-PlaylistFile {
         StorageLink = $StorageLink
         FileList = $FileList}
 
-    $Successful = Invoke-UntilSuccessful `
-        -MaxIterations $MaxIterations `
-        -ScriptBlock ${function:Download-Files} `
-        -Arguments $FuncArgs
+    $Successful = (Invoke-UntilSuccessful -MaxIterations $MaxIterations -ScriptBlock ${function:Download-Files} -Arguments $FuncArgs)
 
     if ($Successful) {
         Print-Message "Playlist file download successful"
@@ -77,10 +74,7 @@ function Download-MediaFiles {
         StorageLink = $StorageLink
         FileList = $FileList}
 
-    $Successful = Invoke-UntilSuccessful `
-        -MaxIterations $MaxIterations `
-        -ScriptBlock ${function:Download-Files} `
-        -Arguments $FuncArgs
+    $Successful = (Invoke-UntilSuccessful -MaxIterations $MaxIterations -ScriptBlock ${function:Download-Files} -Arguments $FuncArgs)
 
     if ($Successful) {
         Print-Message "Media files download successful"
@@ -104,20 +98,27 @@ function Download-Files {
         FailedFiles = [ArrayList]::new()
 
         PrintMsgStr = ${function::Print-Message}.ToString()
-        RemArgsStr = ${function::Remove-Arguments}.ToString()
+        GetWoArgsStr = ${function::Get-WithoutWebargs}.ToString()
+        GetWoPathStr = ${function::Get-WithoutWebpath}.ToString()
         InvSyncStr = ${function::Invoke-Synchronized}.ToString()
     })
 
     $FileList | ForEach-Object -Parallel {
 
-        $FileWA = $_
+        ${function:Get-WithoutWebargs} = $using:ThreadArgs.GetWoArgsStr
+        ${function:Get-WithoutWebpath} = $using:ThreadArgs.GetWoPathStr
 
-        ${function:Remove-Arguments} = $using:ThreadArgs.RemArgsStr
-        $File = Remove-Arguments $FileWA
-        $FilePath = $(Get-Location).Path + "\$File"
+        $FileWA = $_
+        $File = (Get-WithoutWebargs $FileWA)
+
+        $FileNameWA = (Get-WithoutWebpath $FileWA)
+        $FileName = (Get-WithoutWebpath $File)
+
+        $LocalPath = $(Get-Location).Path + "\$FileName"
+        $FileLink = "$using:StorageLink/$FileNameWA"
 
         try {
-            (New-Object System.Net.WebClient).DownloadFile("$using:StorageLink/$FileWA", $FilePath)
+            (New-Object System.Net.WebClient).DownloadFile($FileLink, $LocalPath)
         } catch {
             ${function:Invoke-Synchronized} = $using:ThreadArgs.InvSyncStr
 
@@ -125,7 +126,7 @@ function Download-Files {
                 ($using:ThreadArgs).Successful = $false
 
                 ${function:Print-Message} = $using:ThreadArgs.PrintMsgStr
-                Print-Message "File: $using:StorageLink/$File, Error: $($_.Exception.Message)"
+                Print-Message "File: $FileLink, Error: $($_.Exception.Message)"
 
                 ($using:ThreadArgs).FailedFiles.Add($FileWA) > $null
             }
@@ -147,10 +148,11 @@ function Concat-MediaFiles {
     $Concat = "concat:"
 
     Get-Content $PlaylistFile | Where-Object {$_ -NotMatch "^#"} | ForEach-Object {
-        $MediaFileWA = $_.Substring($_.LastIndexOf("/")+1)
-        $MediaFile = Remove-Arguments $MediaFileWA
+        $FileWA = $_
+        $File = (Get-WithoutWebargs $FileWA)
+        $FileName = (Get-WithoutWebpath $File)
 
-        $Concat += "$MediaFile|"
+        $Concat += "$FileName|"
     }
 
     ffmpeg -i $Concat -c copy $OutputFile
