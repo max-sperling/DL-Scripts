@@ -11,18 +11,19 @@ def download_playlist(playlist_link, output_file):
     playlist_file_wa = playlist_link.rsplit('/', 1)[-1]
     playlist_file = download_utils.get_without_webargs(playlist_file_wa)
 
-    if not download_playlist_file(3, storage_link, playlist_file_wa):
+    if not download_playlist_file(storage_link, playlist_file_wa):
         return False
-    if not download_media_files(3, storage_link, playlist_file):
+    if not download_media_files(storage_link, playlist_file):
         return False
     if not concat_media_files(playlist_file, output_file):
         return False
 
     return True
 
-def download_playlist_file(max_iterations, storage_link, playlist_file_wa):
+def download_playlist_file(storage_link, playlist_file_wa):
     file_list = [playlist_file_wa]
-    successful = download_utils.call_until_successful(max_iterations, download_files, storage_link, file_list)
+
+    successful = download_files(storage_link, file_list)
 
     if successful:
         download_utils.print_message("Playlist file download successful")
@@ -31,7 +32,7 @@ def download_playlist_file(max_iterations, storage_link, playlist_file_wa):
 
     return successful
 
-def download_media_files(max_iterations, storage_link, playlist_file):
+def download_media_files(storage_link, playlist_file):
     file_list = []
 
     with open(playlist_file, 'r') as f:
@@ -40,7 +41,7 @@ def download_media_files(max_iterations, storage_link, playlist_file):
             if not line.startswith('#'):
                 file_list.append(line)
 
-    successful = download_utils.call_until_successful(max_iterations, download_files, storage_link, file_list)
+    successful = download_files(storage_link, file_list)
 
     if successful:
         download_utils.print_message("Media files download successful")
@@ -51,27 +52,22 @@ def download_media_files(max_iterations, storage_link, playlist_file):
 
 def download_files(storage_link, file_list):
     successful = True
-    failed_files = []
     lock = threading.Lock()
 
     def download_file_task(file_wa):
         nonlocal successful
-        nonlocal failed_files
 
         file = download_utils.get_without_webargs(file_wa)
         file_name = download_utils.get_without_webpath(file)
         local_path = os.path.join(os.getcwd(), file_name)
         file_link = f"{storage_link}/{file_wa}"
 
-        try:
-            download_utils.download_file(file_link, local_path)
-        except Exception as e:
+        if not download_utils.download_file(file_link, local_path):
             with lock:
                 successful = False
-                download_utils.print_message(f"File: {file_link}, Error: {str(e)}")
-                failed_files.append(file_wa)
+                download_utils.print_message(f"Downloading file {file_link} failed")
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers = 5) as executor:
         executor.map(download_file_task, file_list)
 
     return successful
@@ -94,7 +90,7 @@ def concat_media_files(playlist_file, output_file):
     try:
         subprocess.run(command, check=True)
     except Exception as e:
-        download_utils.print_message(f"Media files concatenation failed: {e}")
+        download_utils.print_message(f"Media files concatenation failed ({e})")
         return False
 
     download_utils.print_message("Media files concatenation successful")
@@ -102,8 +98,8 @@ def concat_media_files(playlist_file, output_file):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--playlist-link', type=str, required=True)
-    parser.add_argument('-o', '--output-file', type=str, required=True)
+    parser.add_argument('-p', '--playlist-link', type = str, required = True)
+    parser.add_argument('-o', '--output-file', type = str, required = True)
 
     args = parser.parse_args()
     successful = download_playlist(args.playlist_link, args.output_file)
