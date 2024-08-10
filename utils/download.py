@@ -1,7 +1,5 @@
-import datetime
 import os
 import requests
-import urllib
 
 def download_file(url, filename, retries = 3):
     if os.path.isfile(filename):
@@ -24,15 +22,3 @@ def get_without_webargs(link):
 
 def get_without_webpath(link):
     return link.split('/')[-1]
-
-def print_message(message):
-    print(f"{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")} {message}")
-
-def remove_duplicates(items):
-    unique_items = []
-
-    for item in items:
-        if item not in unique_items:
-            unique_items.append(item)
-
-    return unique_items

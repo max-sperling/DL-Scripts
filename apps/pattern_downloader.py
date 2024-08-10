@@ -1,4 +1,5 @@
-import download_utils
+from utils import download
+from utils import general
 
 import argparse
 import re
@@ -10,7 +11,7 @@ def download_pattern(url, pattern):
     text = response.text
 
     items = search_items(text, pattern)
-    items = download_utils.remove_duplicates(items)
+    items = general.remove_duplicates(items)
     download_items(items)
 
 def search_items(text, pattern):
@@ -19,12 +20,12 @@ def search_items(text, pattern):
 
 def download_items(items):
     for item in items:
-        item_name = download_utils.get_without_webpath(item)
+        item_name = download.get_without_webpath(item)
 
-        if download_utils.download_file(item, item_name):
-            download_utils.print_message(f"Download successful: {item}")
+        if download.download_file(item, item_name):
+            general.print_message(f"Download successful: {item}")
         else:
-            download_utils.print_message(f"Download failed: {item}")
+            general.print_message(f"Download failed: {item}")
 
 def main():
     parser = argparse.ArgumentParser()
