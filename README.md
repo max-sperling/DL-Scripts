@@ -5,13 +5,13 @@
 ### Install package
 
 <pre>
-pip install -e <path/to/dl-scripts>
+$ pip install -e &lt;path/to/dl-scripts&gt;
 </pre>
 
 ### Uninstall package
 
 <pre>
-pip uninstall dl-scripts
+$ pip uninstall dl-scripts
 </pre>
 
 ## Execution
@@ -19,11 +19,11 @@ pip uninstall dl-scripts
 ### Playlist-Downloader
 
 <pre>
-$ download_playlist -p "https://Link/to/playlist.m3u8" -o "Video.mkv"
+$ playlist_downloader -p "https://Link/to/playlist.m3u8" -o "Video.mkv"
 </pre>
 
 ### Pattern-Downloader
 
 <pre>
-$ download_pattern -u "https://Link/to/webpage.html" -p "Pattern"
+$ pattern_downloader -u "https://Link/to/webpage.html" -p "Pattern"
 </pre>
