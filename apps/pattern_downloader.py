@@ -20,7 +20,7 @@ def search_items(text, pattern):
 
 def download_items(items):
     for item in items:
-        item_name = download.get_without_webpath(item)
+        item_name = download.get_resource_without_webargs(item)
 
         if download.download_file(item, item_name):
             general.print_message(f"Download successful: {item}")

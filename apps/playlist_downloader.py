@@ -8,9 +8,9 @@ import threading
 import subprocess
 
 def download_playlist(playlist_link, output_file):
-    storage_link = playlist_link.rsplit('/', 1)[0]
-    playlist_file_wa = playlist_link.rsplit('/', 1)[-1]
-    playlist_file = download.get_without_webargs(playlist_file_wa)
+    storage_link = download.get_link_without_resource(playlist_link)
+    playlist_file_wa = download.get_resource_with_webargs(playlist_link)
+    playlist_file = download.get_resource_without_webargs(playlist_link)
 
     if not download_playlist_file(storage_link, playlist_file_wa):
         return False
@@ -39,7 +39,7 @@ def download_media_files(storage_link, playlist_file):
     with open(playlist_file, 'r') as f:
         for line in f:
             line = line.strip()
-            if not line.startswith('#'):
+            if line and not line.startswith('#'):
                 file_list.append(line)
 
     successful = download_files(storage_link, file_list)
@@ -51,25 +51,24 @@ def download_media_files(storage_link, playlist_file):
 
     return successful
 
-def download_files(storage_link, file_list):
+def download_files(storage_link, url_list):
     successful = True
     lock = threading.Lock()
 
-    def download_file_task(file_wa):
+    def download_file_task(url_wa):
         nonlocal successful
 
-        file = download.get_without_webargs(file_wa)
-        file_name = download.get_without_webpath(file)
-        local_path = os.path.join(os.getcwd(), file_name)
+        file_wa = download.get_resource_with_webargs(url_wa)
+        file = download.get_resource_without_webargs(url_wa)
         file_link = f"{storage_link}/{file_wa}"
+        local_path = os.path.join(os.getcwd(), file)
 
         if not download.download_file(file_link, local_path):
             with lock:
                 successful = False
-                general.print_message(f"Downloading file {file_link} failed")
 
     with concurrent.futures.ThreadPoolExecutor(max_workers = 5) as executor:
-        executor.map(download_file_task, file_list)
+        executor.map(download_file_task, url_list)
 
     return successful
 
@@ -80,10 +79,9 @@ def concat_media_files(playlist_file, output_file):
         for line in f:
             line = line.strip()
             if not line.startswith('#'):
-                file_wa = line
-                file = download.get_without_webargs(file_wa)
-                file_name = download.get_without_webpath(file)
-                concat += f"{file_name}|"
+                url_wa = line
+                file = download.get_resource_without_webargs(url_wa)
+                concat += f"{file}|"
 
     concat = concat.rstrip('|')
     command = ["ffmpeg", "-i", concat, "-c", "copy", output_file]
