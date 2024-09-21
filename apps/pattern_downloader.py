@@ -5,35 +5,70 @@ import argparse
 import re
 import requests
 
-def download_pattern(url, pattern):
-    response = requests.get(url)
-    response.raise_for_status()
-    text = response.text
+def download_pattern(resource_url, search_pattern):
+    successful, resource_content = get_resource_content(resource_url)
+    if not successful:
+        return False
 
-    items = search_items(text, pattern)
-    items = general.remove_duplicates(items)
-    download_items(items)
+    successful = download_matching_items(resource_content, search_pattern)
+    if not successful:
+        return False
 
-def search_items(text, pattern):
-    matches = re.findall(pattern, text)
-    return matches
+    return True
 
-def download_items(items):
-    for item in items:
-        item_name = download.get_resource_without_webargs(item)
+def get_resource_content(resource_url):
+    resource_content = ""
 
-        if download.download_file(item, item_name):
-            general.print_message(f"Download successful: {item}")
-        else:
-            general.print_message(f"Download failed: {item}")
+    try:
+        response = requests.get(resource_url)
+        response.raise_for_status()
+        resource_content = response.text
+    except Exception as e:
+        general.print_message(f"Get resource content failed ({e})")
+        return False, resource_content
+
+    general.print_message("Get resource content successful")
+    return True, resource_content
+
+def download_matching_items(resource_content, search_pattern):
+    item_urls = re.findall(search_pattern, resource_content)
+    item_urls = general.remove_duplicates(item_urls)
+
+    successful = download_items(item_urls)
+
+    if successful:
+        general.print_message("Download matching items successful")
+    else:
+        general.print_message("Download matching items failed")
+
+    return successful
+
+def download_items(item_urls):
+    successful = True
+
+    for item_url in item_urls:
+        item_name = download.get_resource_without_webargs(item_url)
+        
+        try:
+            download.download_file(item_url, item_name)
+        except Exception as e:
+            general.print_message(f"Download failed: {item_name}, {e}")
+            successful = False
+
+    return successful
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-u', '--url', type = str, required = True)
-    parser.add_argument('-p', '--pattern', type = str, required = True)
+    parser.add_argument('-r', '--resource-url', type = str, required = True)
+    parser.add_argument('-s', '--search-pattern', type = str, required = True)
 
     args = parser.parse_args()
-    download_pattern(args.url, args.pattern)
+    successful = download_pattern(args.resource_url, args.search_pattern)
+
+    if successful:
+        general.print_message("Pattern download successful")
+    else:
+        general.print_message("Pattern download failed")
 
 if __name__ == "__main__":
     main()

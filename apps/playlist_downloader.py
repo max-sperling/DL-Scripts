@@ -7,24 +7,24 @@ import os
 import threading
 import subprocess
 
-def download_playlist(playlist_link, output_file):
-    storage_link = download.get_link_without_resource(playlist_link)
-    playlist_file_wa = download.get_resource_with_webargs(playlist_link)
-    playlist_file = download.get_resource_without_webargs(playlist_link)
+def download_playlist(playlist_url, output_file):
+    storage_url = download.get_url_without_resource(playlist_url)
+    playlist_file_wa = download.get_resource_with_webargs(playlist_url)
+    playlist_file = download.get_resource_without_webargs(playlist_url)
 
-    if not download_playlist_file(storage_link, playlist_file_wa):
+    if not download_playlist_file(storage_url, playlist_file_wa):
         return False
-    if not download_media_files(storage_link, playlist_file):
+    if not download_media_files(storage_url, playlist_file):
         return False
     if not concat_media_files(playlist_file, output_file):
         return False
 
     return True
 
-def download_playlist_file(storage_link, playlist_file_wa):
+def download_playlist_file(storage_url, playlist_file_wa):
     file_list = [playlist_file_wa]
 
-    successful = download_files(storage_link, file_list)
+    successful = download_files(storage_url, file_list)
 
     if successful:
         general.print_message("Playlist file download successful")
@@ -33,7 +33,7 @@ def download_playlist_file(storage_link, playlist_file_wa):
 
     return successful
 
-def download_media_files(storage_link, playlist_file):
+def download_media_files(storage_url, playlist_file):
     file_list = []
 
     with open(playlist_file, 'r') as f:
@@ -42,7 +42,7 @@ def download_media_files(storage_link, playlist_file):
             if line and not line.startswith('#'):
                 file_list.append(line)
 
-    successful = download_files(storage_link, file_list)
+    successful = download_files(storage_url, file_list)
 
     if successful:
         general.print_message("Media files download successful")
@@ -51,7 +51,7 @@ def download_media_files(storage_link, playlist_file):
 
     return successful
 
-def download_files(storage_link, url_list):
+def download_files(storage_url, url_list):
     successful = True
     lock = threading.Lock()
 
@@ -60,11 +60,14 @@ def download_files(storage_link, url_list):
 
         file_wa = download.get_resource_with_webargs(url_wa)
         file = download.get_resource_without_webargs(url_wa)
-        file_link = f"{storage_link}/{file_wa}"
-        local_path = os.path.join(os.getcwd(), file)
+        file_url = f"{storage_url}/{file_wa}"
+        file_path = os.path.join(os.getcwd(), file)
 
-        if not download.download_file(file_link, local_path):
+        try:
+            download.download_file(file_url, file_path)
+        except Exception as e:
             with lock:
+                general.print_message(f"Download failed: {file}, {e}")
                 successful = False
 
     with concurrent.futures.ThreadPoolExecutor(max_workers = 5) as executor:
@@ -97,11 +100,11 @@ def concat_media_files(playlist_file, output_file):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--playlist-link', type = str, required = True)
+    parser.add_argument('-p', '--playlist-url', type = str, required = True)
     parser.add_argument('-o', '--output-file', type = str, required = True)
 
     args = parser.parse_args()
-    successful = download_playlist(args.playlist_link, args.output_file)
+    successful = download_playlist(args.playlist_url, args.output_file)
 
     if successful:
         general.print_message("Playlist processing successful")

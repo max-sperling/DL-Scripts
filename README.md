@@ -25,5 +25,5 @@ $ playlist_downloader -p "https://Link/to/playlist.m3u8" -o "Video.mkv"
 ### Pattern-Downloader
 
 <pre>
-$ pattern_downloader -u "https://Link/to/webpage.html" -p "Pattern"
+$ pattern_downloader -r "https://Link/to/webpage.html" -s "Pattern"
 </pre>
