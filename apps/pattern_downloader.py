@@ -47,8 +47,8 @@ def download_items(item_urls):
     successful = True
 
     for item_url in item_urls:
-        item_name = download.get_resource_without_webargs(item_url)
-        
+        item_name = download.get_url_file(item_url)
+
         try:
             download.download_file(item_url, item_name)
         except Exception as e:
@@ -59,8 +59,8 @@ def download_items(item_urls):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-r', '--resource-url', type = str, required = True)
-    parser.add_argument('-s', '--search-pattern', type = str, required = True)
+    parser.add_argument('-U', '--resource-url',   type = str, required = True)
+    parser.add_argument('-P', '--search-pattern', type = str, required = True)
 
     args = parser.parse_args()
     successful = download_pattern(args.resource_url, args.search_pattern)
