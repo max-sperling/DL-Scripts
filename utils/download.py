@@ -1,8 +1,8 @@
 from utils import general
 
+from urllib.parse import urlparse, urlunparse
 import os
 import requests
-from urllib.parse import urlparse, urlunparse
 
 def download_file(url, file, headers = {}, attempts = 3):
     if os.path.isfile(file):
