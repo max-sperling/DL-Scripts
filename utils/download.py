@@ -20,21 +20,25 @@ def download_file(url, file, headers = {}, attempts = 3):
             if attempts == 0:
                 raise
 
-def get_url_domain(url):
+def get_url_base(url):
     parsed_url = urlparse(url)
     return urlunparse((parsed_url.scheme, parsed_url.netloc, '', '', '', ''))
 
-def get_url_domain_dir(url):
+def get_url_base_dirs(url):
     parsed_url = urlparse(url)
-    dir_name = os.path.dirname(parsed_url.path)
-    return urlunparse((parsed_url.scheme, parsed_url.netloc, dir_name, '', '', ''))
+    dirs = os.path.dirname(parsed_url.path)
+    return urlunparse((parsed_url.scheme, parsed_url.netloc, dirs, '', '', ''))
 
 def get_url_file(url):
     parsed_url = urlparse(url)
-    base_name = os.path.basename(parsed_url.path)
-    return urlunparse(('', '', base_name, '', '', ''))
+    file = os.path.basename(parsed_url.path)
+    return urlunparse(('', '', file, '', '', ''))
 
 def get_url_file_args(url):
     parsed_url = urlparse(url)
-    base_name = os.path.basename(parsed_url.path)
-    return urlunparse(('', '', base_name, '', parsed_url.query, ''))
+    file = os.path.basename(parsed_url.path)
+    return urlunparse(('', '', file, '', parsed_url.query, ''))
+
+def get_url_path_args(url):
+    parsed_url = urlparse(url)
+    return urlunparse(('', '', parsed_url.path, '', parsed_url.query, ''))
