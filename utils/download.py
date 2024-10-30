@@ -10,7 +10,7 @@ def download_file(url, file, headers = {}, attempts = 3):
 
     while attempts > 0:
         try:
-            response = requests.get(url, headers = headers, timeout = 10)
+            response = requests.get(url, headers = headers, timeout = (5, 30))
             response.raise_for_status()
             with open(file, 'wb') as f:
                 f.write(response.content)

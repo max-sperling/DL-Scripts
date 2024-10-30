@@ -5,7 +5,6 @@ from enum import Enum
 import argparse
 import ast
 import concurrent.futures
-import hashlib
 import os
 import threading
 import subprocess
@@ -20,14 +19,9 @@ class Playlist_Dler:
         base = 'base' # Only the base matches
         none = 'none' # Nothing matches
 
-    class DL_Content(str, Enum): # ... of the items listed in the playlist file
-        file = 'file' # (Base,) dirs and file provided (default)
-        dirs = 'dirs' # (Base) and dirs provided
-
-    def __init__(self, http_headers, url_overlap, dl_content):
+    def __init__(self, http_headers, url_overlap):
         self.http_headers = http_headers
         self.url_overlap = url_overlap
-        self.dl_content = dl_content
 
     def download_playlist(self, playlist_url, output_file):
         playlist_file = download.get_url_file(playlist_url)
@@ -48,13 +42,13 @@ class Playlist_Dler:
         try:
             download.download_file(playlist_url, playlist_file, self.http_headers)
         except Exception as e:
-            general.print_message(f"Download failed: {playlist_url}, {e}")
+            general.print_message_nok(f"Download failed: {playlist_url}, {e}")
             successful = False
 
         if successful:
-            general.print_message("Playlist file download successful")
+            general.print_message_ok("Playlist file download successful")
         else:
-            general.print_message("Playlist file download failed")
+            general.print_message_nok("Playlist file download failed")
 
         return successful
 
@@ -87,9 +81,9 @@ class Playlist_Dler:
         successful = self.download_files(base_url, rel_url_list)
 
         if successful:
-            general.print_message("Media files download successful")
+            general.print_message_ok("Media files download successful")
         else:
-            general.print_message("Media files download failed")
+            general.print_message_nok("Media files download failed")
 
         return successful
 
@@ -109,20 +103,17 @@ class Playlist_Dler:
                 case self.URL_Overlap.none:
                     file_url = rel_url_wa
 
-            file_path = ""
-            match self.dl_content:
-                case self.DL_Content.file:
-                    file = download.get_url_file(rel_url_wa)
-                    file_path = os.path.join(os.getcwd(), file)
-                case self.DL_Content.dirs:
-                    file_hashed = hashlib.md5(rel_url_wa.encode()).hexdigest()
-                    file_path = os.path.join(os.getcwd(), f"{file_hashed}.ts")
+            file = download.get_url_file(rel_url_wa)
+            file_path = os.path.join(os.getcwd(), file)
 
             try:
                 download.download_file(file_url, file_path, self.http_headers)
             except Exception as e:
                 with lock:
-                    general.print_message(f"Download failed: {file_url}, {e}")
+                    general.print_message_nok("Download failed\n"
+                        f"File-URL: {file_url},\n"
+                        f"File-Path: {file_path},\n"
+                        f"Exception: {e}\n")
                     successful = False
 
         with concurrent.futures.ThreadPoolExecutor(max_workers = 5) as executor:
@@ -137,11 +128,7 @@ class Playlist_Dler:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith('#'):
-                    match self.dl_content:
-                        case self.DL_Content.file:
-                            line = download.get_url_file(line)
-                        case self.DL_Content.dirs:
-                            line = f"{hashlib.md5(line.encode()).hexdigest()}.ts"
+                    line = download.get_url_file(line)
                     concat += f"{line}|"
 
         concat = concat.rstrip('|')
@@ -150,10 +137,10 @@ class Playlist_Dler:
         try:
             subprocess.run(command, check = True)
         except Exception as e:
-            general.print_message(f"Media files concatenation failed ({e})")
+            general.print_message_nok(f"Media files concatenation failed ({e})")
             return False
 
-        general.print_message("Media files concatenation successful")
+        general.print_message_ok("Media files concatenation successful")
         return True
 
 def main():
@@ -170,20 +157,15 @@ def main():
     parser.add_argument('-uo', '--url-overlap', type = Playlist_Dler.URL_Overlap,
                         help = 'The overlap between the PL and the files',
                         required = False, default = Playlist_Dler.URL_Overlap.dirs)
-    parser.add_argument('-pc', '--plst-content', type = Playlist_Dler.DL_Content,
-                        help = 'The item types in the playlist file',
-                        required = False, default = Playlist_Dler.DL_Content.file)
     args = parser.parse_args()
 
-    pl_dler = Playlist_Dler(ast.literal_eval(args.http_headers),
-                            args.url_overlap, args.plst_content)
-    successful = pl_dler.download_playlist(args.playlist_url,
-                                           args.output_file)
+    pl_dler = Playlist_Dler(ast.literal_eval(args.http_headers), args.url_overlap)
+    successful = pl_dler.download_playlist(args.playlist_url, args.output_file)
 
     if successful:
-        general.print_message("Playlist processing successful")
+        general.print_message_ok("Playlist processing successful")
     else:
-        general.print_message("Playlist processing failed")
+        general.print_message_nok("Playlist processing failed")
 
 if __name__ == "__main__":
     main()

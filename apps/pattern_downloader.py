@@ -25,10 +25,10 @@ class Pattern_Dler:
             response.raise_for_status()
             resource_content = response.text
         except Exception as e:
-            general.print_message(f"Get resource content failed ({e})")
+            general.print_message_nok(f"Get resource content failed ({e})")
             return False, resource_content
 
-        general.print_message("Get resource content successful")
+        general.print_message_ok("Get resource content successful")
         return True, resource_content
 
     def download_matching_items(self, resource_content, search_pattern):
@@ -38,9 +38,9 @@ class Pattern_Dler:
         successful = self.download_items(item_urls)
 
         if successful:
-            general.print_message("Download matching items successful")
+            general.print_message_ok("Download matching items successful")
         else:
-            general.print_message("Download matching items failed")
+            general.print_message_nok("Download matching items failed")
 
         return successful
 
@@ -53,7 +53,7 @@ class Pattern_Dler:
             try:
                 download.download_file(item_url, item_name)
             except Exception as e:
-                general.print_message(f"Download failed: {item_name}, {e}")
+                general.print_message_nok(f"Download failed: {item_name}, {e}")
                 successful = False
 
         return successful
@@ -68,9 +68,9 @@ def main():
     successful = p_dler.download_pattern(args.resource_url, args.search_pattern)
 
     if successful:
-        general.print_message("Pattern download successful")
+        general.print_message_ok("Pattern download successful")
     else:
-        general.print_message("Pattern download failed")
+        general.print_message_nok("Pattern download failed")
 
 if __name__ == "__main__":
     main()

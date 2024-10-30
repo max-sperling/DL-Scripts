@@ -1,7 +1,12 @@
 from datetime import datetime
 
-def print_message(message):
-    print(f"{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} {message}")
+def print_message_ok(message):
+    line = f"{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} {message}"
+    print('\033[32m' + line + '\033[0m')
+
+def print_message_nok(message):
+    line = f"{datetime.now().strftime("%Y-%m-%d %H:%M:%S")} {message}"
+    print('\033[31m' + line + '\033[0m')
 
 def remove_duplicates(items):
     unique_items = []
