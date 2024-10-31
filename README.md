@@ -45,3 +45,13 @@ options:
   -ru RESOURCE_URL, --resource-url RESOURCE_URL
   -sp SEARCH_PATTERN, --search-pattern SEARCH_PATTERN
 ```
+
+## Appendix
+
+### URL components
+
+```
+URL: https://www.example.com/path/to/file.ts?key=12345
+     |         Base         |     Path      |  Args  |
+     |Scheme|     Host      | Dirs  | File  |  Args  |
+```

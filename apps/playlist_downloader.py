@@ -9,10 +9,6 @@ import os
 import threading
 import subprocess
 
-# URL: https://www.example.com/path/to/file.ts?key=12345
-#      |         Base         |     Path      |  Args  |
-#      |Scheme|     Host      | Dirs  | File  |  Args  |
-
 class Playlist_Dler:
     class URL_Overlap(str, Enum): # ... between the playlist and the media files
         dirs = 'dirs' # Base and dirs match (default)
