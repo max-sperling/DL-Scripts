@@ -155,7 +155,12 @@ def main():
                         required = False, default = Playlist_Dler.URL_Overlap.dirs)
     args = parser.parse_args()
 
-    pl_dler = Playlist_Dler(ast.literal_eval(args.http_headers), args.url_overlap)
+    if args.http_headers:
+        parsed_headers = ast.literal_eval(args.http_headers)
+    else:
+        parsed_headers = {}
+
+    pl_dler = Playlist_Dler(parsed_headers, args.url_overlap)
     successful = pl_dler.download_playlist(args.playlist_url, args.output_file)
 
     if successful:
