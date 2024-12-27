@@ -1,5 +1,6 @@
 from utils import general
 
+from enum import Enum
 from urllib.parse import urlparse, urlunparse
 import os
 import requests
@@ -26,6 +27,26 @@ def get_url_file_args(url):
 def get_url_path_args(url):
     parsed_url = urlparse(url)
     return urlunparse(('', '', parsed_url.path, '', parsed_url.query, ''))
+
+class URL_Overlap(Enum):
+    DIRS = 1  # Base and dirs match
+    BASE = 2  # Only the base matches
+    NONE = 3  # Nothing matches
+
+def find_url_overlap(url1, url2):
+    parsed_url1 = urlparse(url1)
+    parsed_url2 = urlparse(url2)
+
+    if ((parsed_url1.scheme == parsed_url2.scheme or parsed_url1.scheme == "" or parsed_url2.scheme == "") and
+        (parsed_url1.netloc == parsed_url2.netloc or parsed_url1.netloc == "" or parsed_url2.netloc == "")):
+        url1_dirs = os.path.dirname(parsed_url1.path)
+        url2_dirs = os.path.dirname(parsed_url2.path)
+        if (url1_dirs == url2_dirs or url1_dirs == "" or url2_dirs == ""):
+            return URL_Overlap.DIRS
+        else:
+           return URL_Overlap.BASE
+    else:
+        return URL_Overlap.NONE
 
 def download_file(url, file, headers = {}, attempts = 3):
     if os.path.isfile(file):

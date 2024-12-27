@@ -20,7 +20,7 @@ $ pip uninstall dl-scripts
 
 ```
 $ playlist_downloader -h
-usage: playlist_downloader [-h] -pu PLAYLIST_URL -of OUTPUT_FILE [-hh HTTP_HEADERS] [-uo URL_OVERLAP]
+usage: playlist_downloader [-h] -pu PLAYLIST_URL -of OUTPUT_FILE [-hh HTTP_HEADERS]
 
 options:
   -h, --help            show this help message and exit
@@ -30,8 +30,6 @@ options:
                         The name of the output video file
   -hh HTTP_HEADERS, --http-headers HTTP_HEADERS
                         The headers provided to the server
-  -uo URL_OVERLAP, --url-overlap URL_OVERLAP
-                        The overlap between the PL and the files
 ```
 
 ### Pattern-Downloader
