@@ -1,5 +1,6 @@
 from utils import download
 from utils import general
+from utils import weblinks
 
 from enum import Enum
 import argparse
@@ -16,7 +17,7 @@ class Playlist_Dler:
         self.http_headers = http_headers
 
     def download_playlist(self):
-        playlist_file = download.get_url_file(self.playlist_url)
+        playlist_file = weblinks.get_url_file(self.playlist_url)
 
         if not self.download_playlist_file(playlist_file):
             return False
@@ -48,29 +49,36 @@ class Playlist_Dler:
         base_url = ""
         rel_urls = []
 
-        with open(playlist_file, 'r') as f:
-            for line in f:
+        with open(playlist_file, 'r') as file:
+            for line in file:
                 line = line.strip()
                 if line and not line.startswith('#'):
                     media_files.append(line)
 
-        url_overlap = download.find_url_overlap(self.playlist_url, media_files[0])
+        if not media_files:
+            general.print_message_nok("No media files found in playlist")
+            return False
+
+        url_overlap = weblinks.Url_Overlap.calculate(self.playlist_url, media_files[0])
         match url_overlap:
-            case download.URL_Overlap.DIRS:
+            case weblinks.Url_Overlap.DIRS:
                 general.print_message_ok("Calculated url overlap: DIRS")
-                base_url = download.get_url_base_dirs(self.playlist_url)
+                base_url = weblinks.get_url_base_dirs(self.playlist_url)
                 for media_file in media_files:
-                    rel_urls.append(download.get_url_file_args(media_file))
-            case download.URL_Overlap.BASE:
+                    rel_urls.append(weblinks.get_url_file_args(media_file))
+            case weblinks.Url_Overlap.BASE:
                 general.print_message_ok("Calculated url overlap: BASE")
-                base_url = download.get_url_base(self.playlist_url)
+                base_url = weblinks.get_url_base(self.playlist_url)
                 for media_file in media_files:
-                    rel_urls.append(download.get_url_path_args(media_file))
-            case download.URL_Overlap.NONE:
+                    rel_urls.append(weblinks.get_url_path_args(media_file))
+            case weblinks.Url_Overlap.NONE:
                 general.print_message_ok("Calculated url overlap: NONE")
                 # base_url = ""
                 for media_file in media_files:
                     rel_urls.append(media_file)
+            case _:
+                general.print_message_nok("Calculated url overlap: Unknown")
+                return False
 
         successful = self.download_files(base_url, rel_urls)
 
@@ -94,17 +102,17 @@ class Playlist_Dler:
             else:
                 file_url = f"{base_url}/{rel_url_wa}"
 
-            file = download.get_url_file(rel_url_wa)
+            file = weblinks.get_url_file(rel_url_wa)
             file_path = os.path.join(os.getcwd(), file)
 
             try:
                 download.download_file(file_url, file_path, self.http_headers)
-            except Exception as e:
+            except Exception as exception:
                 with lock:
                     general.print_message_nok("Download failed\n"
                         f"File-URL: {file_url},\n"
                         f"File-Path: {file_path},\n"
-                        f"Exception: {e}\n")
+                        f"Exception: {exception}\n")
                     successful = False
 
         with concurrent.futures.ThreadPoolExecutor(max_workers = 5) as executor:
@@ -115,11 +123,11 @@ class Playlist_Dler:
     def concat_media_files(self, playlist_file):
         concat = "concat:"
 
-        with open(playlist_file, 'r') as f:
-            for line in f:
+        with open(playlist_file, 'r') as file:
+            for line in file:
                 line = line.strip()
                 if line and not line.startswith('#'):
-                    line = download.get_url_file(line)
+                    line = weblinks.get_url_file(line)
                     concat += f"{line}|"
 
         concat = concat.rstrip('|')

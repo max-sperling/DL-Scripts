@@ -1,5 +1,6 @@
 from utils import download
 from utils import general
+from utils import weblinks
 
 import argparse
 import re
@@ -24,8 +25,8 @@ class Pattern_Dler:
             response = requests.get(resource_url)
             response.raise_for_status()
             resource_content = response.text
-        except Exception as e:
-            general.print_message_nok(f"Get resource content failed ({e})")
+        except Exception as exception:
+            general.print_message_nok(f"Get resource content failed ({exception})")
             return False, resource_content
 
         general.print_message_ok("Get resource content successful")
@@ -34,6 +35,10 @@ class Pattern_Dler:
     def download_matching_items(self, resource_content, search_pattern):
         item_urls = re.findall(search_pattern, resource_content)
         item_urls = general.remove_duplicates(item_urls)
+
+        if not item_urls:
+            general.print_message_nok("No matching items found in resource")
+            return False
 
         successful = self.download_items(item_urls)
 
@@ -48,12 +53,12 @@ class Pattern_Dler:
         successful = True
 
         for item_url in item_urls:
-            item_name = download.get_url_file(item_url)
+            item_name = weblinks.get_url_file(item_url)
 
             try:
                 download.download_file(item_url, item_name)
-            except Exception as e:
-                general.print_message_nok(f"Download failed: {item_name}, {e}")
+            except Exception as exception:
+                general.print_message_nok(f"Download failed: {item_name}, {exception}")
                 successful = False
 
         return successful
