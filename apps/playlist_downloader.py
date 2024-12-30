@@ -47,7 +47,6 @@ class Playlist_Dler:
     def download_media_files(self, playlist_file):
         media_files = []
         base_url = ""
-        rel_urls = []
 
         with open(playlist_file, 'r') as file:
             for line in file:
@@ -64,23 +63,21 @@ class Playlist_Dler:
             case weblinks.Url_Overlap.DIRS:
                 general.print_message_ok("Calculated url overlap: DIRS")
                 base_url = weblinks.get_url_base_dirs(self.playlist_url)
-                for media_file in media_files:
-                    rel_urls.append(weblinks.get_url_file_args(media_file))
+                for i in range(len(media_files)):
+                    media_files[i] = weblinks.get_url_file_args(media_files[i])
             case weblinks.Url_Overlap.BASE:
                 general.print_message_ok("Calculated url overlap: BASE")
                 base_url = weblinks.get_url_base(self.playlist_url)
-                for media_file in media_files:
-                    rel_urls.append(weblinks.get_url_path_args(media_file))
+                for i in range(len(media_files)):
+                    media_files[i] = weblinks.get_url_path_args(media_files[i])
             case weblinks.Url_Overlap.NONE:
                 general.print_message_ok("Calculated url overlap: NONE")
-                # base_url = ""
-                for media_file in media_files:
-                    rel_urls.append(media_file)
+                # nothing to do
             case _:
                 general.print_message_nok("Calculated url overlap: Unknown")
                 return False
 
-        successful = self.download_files(base_url, rel_urls)
+        successful = self.download_files(base_url, media_files)
 
         if successful:
             general.print_message_ok("Media files download successful")
