@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "dl-scripts"
 version = "0.1"
-dependencies = []
+dependencies = ["requests"]
 
 [tool.setuptools]
 packages = ["apps", "utils"]
