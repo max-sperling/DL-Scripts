@@ -118,19 +118,38 @@ class Playlist_Dler:
         return successful
 
     def concat_media_files(self, playlist_file):
-        concat = "concat:"
+        ary = []
 
         with open(playlist_file, 'r') as file:
+            max_len = 20000
+            row = ""
             for line in file:
                 line = line.strip()
                 if line and not line.startswith('#'):
                     line = weblinks.get_url_file(line)
-                    concat += f"{line}|"
-
-        concat = concat.rstrip('|')
-        command = ["ffmpeg", "-i", concat, "-c", "copy", self.output_file]
+                    if len(row) <= max_len:
+                        row += f"{line}|"
+                    else:
+                        row = f"concat:{row}"
+                        row = row.rstrip('|')
+                        ary.append(row)
+                        row = ""
+            if row:
+                row = f"concat:{row}"
+                row = row.rstrip('|')
+                ary.append(row)
 
         try:
+            file_name, _ = self.output_file.rsplit('.')
+            parts = ""
+            for idx, row in enumerate(ary):
+                part = f"{file_name}_part{idx}.ts"
+                command = ["ffmpeg", "-i", row, "-c", "copy", part]
+                subprocess.run(command, check = True)
+                parts += f"{part}|"
+            parts = f"concat:{parts}"
+            parts = parts.rstrip('|')
+            command = ["ffmpeg", "-i", parts, "-c", "copy", self.output_file]
             subprocess.run(command, check = True)
         except Exception as e:
             general.print_message_nok(f"Media files concatenation failed ({e})")
