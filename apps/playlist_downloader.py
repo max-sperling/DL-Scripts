@@ -58,8 +58,8 @@ class Playlist_Dler:
             general.print_message_nok("No media files found in playlist")
             return False
 
-        url_overlap = weblinks.Url_Overlap.calculate(self.playlist_url, media_files[0])
-        match url_overlap:
+        self.url_overlap = weblinks.Url_Overlap.calculate(self.playlist_url, media_files[0])
+        match self.url_overlap:
             case weblinks.Url_Overlap.DIRS:
                 general.print_message_ok("Calculated url overlap: DIRS")
                 base_url = weblinks.get_url_base_dirs(self.playlist_url)
@@ -89,6 +89,7 @@ class Playlist_Dler:
     def download_files(self, base_url, rel_urls):
         successful = True
         lock = threading.Lock()
+        self.urls_are_files = weblinks.url_is_file(rel_urls[0])
 
         def download_task(rel_url_wa):
             nonlocal successful
@@ -99,7 +100,12 @@ class Playlist_Dler:
             else:
                 file_url = f"{base_url}/{rel_url_wa}"
 
-            file = weblinks.get_url_file(rel_url_wa)
+            file = ""
+            if self.urls_are_files:
+                file = weblinks.get_url_file(rel_url_wa)
+            else: # folders
+                file = f"{general.hash_text(rel_url_wa)}.ts"
+
             file_path = os.path.join(os.getcwd(), file)
 
             try:
@@ -126,7 +132,17 @@ class Playlist_Dler:
             for line in file:
                 line = line.strip()
                 if line and not line.startswith('#'):
-                    line = weblinks.get_url_file(line)
+                    if self.urls_are_files:
+                        line = weblinks.get_url_file(line)
+                    else: # folders
+                        match self.url_overlap:
+                            case weblinks.Url_Overlap.DIRS:
+                                line = f"{general.hash_text(weblinks.get_url_file_args(line))}.ts"
+                            case weblinks.Url_Overlap.BASE:
+                                line = f"{general.hash_text(weblinks.get_url_path_args(line))}.ts"
+                            case weblinks.Url_Overlap.NONE:
+                                line = f"{general.hash_text(line)}.ts"
+
                     if len(row) <= max_len:
                         row += f"{line}|"
                     else:

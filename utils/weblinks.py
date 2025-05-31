@@ -1,6 +1,9 @@
 from urllib.parse import urlparse, urlunparse
 import os
 
+def url_is_file(url):
+    return not url.rstrip().endswith('/')
+
 def get_url_base(url):
     parsed_url = urlparse(url)
     return urlunparse((parsed_url.scheme, parsed_url.netloc, '', '', '', ''))

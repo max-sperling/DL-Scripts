@@ -1,4 +1,8 @@
 from datetime import datetime
+import hashlib
+
+def hash_text(text):
+    return hashlib.md5(text.encode()).hexdigest()
 
 def print_message_ok(message):
     line = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {message}"
