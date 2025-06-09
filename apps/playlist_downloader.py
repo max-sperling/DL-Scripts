@@ -104,7 +104,7 @@ class Playlist_Dler:
             if self.urls_are_files:
                 file = weblinks.get_url_file(rel_url_wa)
             else: # folders
-                file = f"{general.hash_text(rel_url_wa)}.ts"
+                file = f"{general.get_hashed_text(rel_url_wa)}.ts"
 
             file_path = os.path.join(os.getcwd(), file)
 
@@ -127,7 +127,7 @@ class Playlist_Dler:
         ary = []
 
         with open(playlist_file, 'r') as file:
-            max_len = 20000
+            max_len = general.get_cmd_content_limit()
             row = ""
             for line in file:
                 line = line.strip()
@@ -137,11 +137,11 @@ class Playlist_Dler:
                     else: # folders
                         match self.url_overlap:
                             case weblinks.Url_Overlap.DIRS:
-                                line = f"{general.hash_text(weblinks.get_url_file_args(line))}.ts"
+                                line = f"{general.get_hashed_text(weblinks.get_url_file_args(line))}.ts"
                             case weblinks.Url_Overlap.BASE:
-                                line = f"{general.hash_text(weblinks.get_url_path_args(line))}.ts"
+                                line = f"{general.get_hashed_text(weblinks.get_url_path_args(line))}.ts"
                             case weblinks.Url_Overlap.NONE:
-                                line = f"{general.hash_text(line)}.ts"
+                                line = f"{general.get_hashed_text(line)}.ts"
 
                     if len(row) <= max_len:
                         row += f"{line}|"
