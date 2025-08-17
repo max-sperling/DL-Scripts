@@ -127,7 +127,7 @@ class Playlist_Dler:
         ary = []
 
         with open(playlist_file, 'r') as file:
-            max_len = general.get_cmd_content_limit()
+            max_len, _ = general.get_cmd_content_limit()
             row = ""
             for line in file:
                 line = line.strip()

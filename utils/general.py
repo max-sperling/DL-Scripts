@@ -18,18 +18,20 @@ def print_message_warn(message):
     print('\033[33m' + line + '\033[0m')
 
 def get_cmd_content_limit():
-    cmd_line_limit = 20000
-    meta_content = 500
+    content_limit = 20000
+    meta_limit = 500
 
     if platform.system() == "Windows":
-        cmd_line_limit = 32767
+        content_limit = 32767
     elif platform.system() in ("Linux", "Darwin"):
         import os
-        cmd_line_limit = os.sysconf("SC_ARG_MAX")
+        content_limit = os.sysconf("SC_ARG_MAX")
     else:
         print_message_warn("Unknown platform. Using default command line limit.")
 
-    return cmd_line_limit - meta_content
+    payload_limit = content_limit - meta_limit
+
+    return payload_limit, meta_limit
 
 def remove_duplicates(items):
     unique_items = []
