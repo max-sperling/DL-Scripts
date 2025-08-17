@@ -44,6 +44,12 @@ options:
   -sp SEARCH_PATTERN, --search-pattern SEARCH_PATTERN
 ```
 
+## Testing
+
+```
+<path/to/dl-scripts>$ python -m unittest -v
+```
+
 ## Appendix
 
 ### URL components
