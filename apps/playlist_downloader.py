@@ -11,10 +11,11 @@ import threading
 import subprocess
 
 class Playlist_Dler:
-    def __init__(self, playlist_url, output_file, http_headers):
+    def __init__(self, playlist_url, output_file, http_headers, max_workers):
         self.playlist_url = playlist_url
         self.output_file = output_file
         self.http_headers = http_headers
+        self.max_workers = max_workers
 
     def download_playlist(self):
         playlist_file = weblinks.get_url_file(self.playlist_url)
@@ -118,7 +119,7 @@ class Playlist_Dler:
                         f"Exception: {exception}\n")
                     successful = False
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers = 5) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers = self.max_workers) as executor:
             executor.map(download_task, rel_urls)
 
         return successful
@@ -185,6 +186,9 @@ def main():
     parser.add_argument('-hh', '--http-headers', type = str,
                         help = 'The headers provided to the server',
                         required = False, default = "")
+    parser.add_argument('-mw', '--max-workers', type = int,
+                        help = 'The maximum number of download workers',
+                        required = False, default = 10)
     args = parser.parse_args()
 
     if args.http_headers:
@@ -192,7 +196,7 @@ def main():
     else:
         parsed_headers = {}
 
-    pl_dler = Playlist_Dler(args.playlist_url, args.output_file, parsed_headers)
+    pl_dler = Playlist_Dler(args.playlist_url, args.output_file, parsed_headers, args.max_workers)
     successful = pl_dler.download_playlist()
 
     if successful:
