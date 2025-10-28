@@ -1,7 +1,8 @@
 import os
 import requests
+import urllib3
 
-def download_file(url, file, headers = None, attempts = 3, timeout = (5, 30)):
+def download_file(url, file, headers = None, attempts = 3, timeout = (5, 30), verify = True):
     """
     Download a URL to a local file with retry and timeout control.
 
@@ -22,6 +23,8 @@ def download_file(url, file, headers = None, attempts = 3, timeout = (5, 30)):
         tuple. The default ``(5, 30)`` preserves the previous behavior
         (5s connect, 30s read). Passing ``None`` disables the timeout (not
         recommended).
+    verify : bool, optional
+        Whether to verify the server's TLS certificate. Defaults to True.
 
     Raises
     ------
@@ -33,15 +36,19 @@ def download_file(url, file, headers = None, attempts = 3, timeout = (5, 30)):
     The function will remove a partially-downloaded file if the final
     attempt fails.
     """
-    if headers is None:
-        headers = {}
-
     if os.path.isfile(file):
         return
 
+    if headers is None:
+        headers = {}
+
+    # If verify is False, suppress InsecureRequestWarning
+    if verify is False:
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
     while attempts > 0:
         try:
-            response = requests.get(url, headers = headers, timeout = timeout)
+            response = requests.get(url, headers = headers, timeout = timeout, verify = verify)
             response.raise_for_status()
             with open(file, 'wb') as f:
                 f.write(response.content)

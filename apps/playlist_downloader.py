@@ -11,11 +11,12 @@ import threading
 import subprocess
 
 class Playlist_Dler:
-    def __init__(self, playlist_url, output_file, http_headers, max_workers):
+    def __init__(self, playlist_url, output_file, http_headers, max_workers, do_verify):
         self.playlist_url = playlist_url
         self.output_file = output_file
         self.http_headers = http_headers
         self.max_workers = max_workers
+        self.do_verify = do_verify
 
     def download_playlist(self):
         playlist_file = weblinks.get_url_file(self.playlist_url)
@@ -33,7 +34,8 @@ class Playlist_Dler:
         successful = True
 
         try:
-            download.download_file(self.playlist_url, playlist_file, self.http_headers)
+            download.download_file(
+                url = self.playlist_url, file = playlist_file, headers = self.http_headers, verify = self.do_verify)
         except Exception as e:
             general.print_message_nok(f"Download failed: {self.playlist_url}, {e}")
             successful = False
@@ -110,7 +112,8 @@ class Playlist_Dler:
             file_path = os.path.join(os.getcwd(), file)
 
             try:
-                download.download_file(file_url, file_path, self.http_headers)
+                download.download_file(
+                    url = file_url, file = file_path, headers = self.http_headers, verify = self.do_verify)
             except Exception as exception:
                 with lock:
                     general.print_message_nok("Download failed\n"
@@ -189,14 +192,24 @@ def main():
     parser.add_argument('-mw', '--max-workers', type = int,
                         help = 'The maximum number of download workers',
                         required = False, default = 10)
+    parser.add_argument('-nv', '--no-verify', dest = 'do_verify', action = 'store_false',
+                        help = 'Disable TLS certificate verification',
+                        required = False, default = True)
     args = parser.parse_args()
+
+    general.print_message_info("Provided arguments:")
+    general.print_message_info(f"  playlist_url: {args.playlist_url}")
+    general.print_message_info(f"  output_file: {args.output_file}")
+    general.print_message_info(f"  http_headers : {args.http_headers}")
+    general.print_message_info(f"  max_workers: {args.max_workers}")
+    general.print_message_info(f"  do_verify : {args.do_verify}")
 
     if args.http_headers:
         parsed_headers = ast.literal_eval(args.http_headers)
     else:
         parsed_headers = {}
 
-    pl_dler = Playlist_Dler(args.playlist_url, args.output_file, parsed_headers, args.max_workers)
+    pl_dler = Playlist_Dler(args.playlist_url, args.output_file, parsed_headers, args.max_workers, args.do_verify)
     successful = pl_dler.download_playlist()
 
     if successful:

@@ -6,16 +6,24 @@ def get_hashed_text(text):
     return hashlib.md5(text.encode()).hexdigest()
 
 def print_message_ok(message):
+    """Print a message in green color with a timestamp."""
     line = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {message}"
     print('\033[32m' + line + '\033[0m')
 
 def print_message_nok(message):
+    """Print a message in red color with a timestamp."""
     line = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {message}"
     print('\033[31m' + line + '\033[0m')
 
 def print_message_warn(message):
+    """Print a message in yellow color with a timestamp."""
     line = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {message}"
     print('\033[33m' + line + '\033[0m')
+
+def print_message_info(message):
+    """Print a message in white color with a timestamp."""
+    line = f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} {message}"
+    print('\033[37m' + line + '\033[0m')
 
 def get_cmd_content_limit():
     content_limit = 20000
