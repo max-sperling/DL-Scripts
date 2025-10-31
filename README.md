@@ -20,16 +20,22 @@ $ pip uninstall dl-scripts
 
 ```
 $ playlist_downloader -h
-usage: playlist_downloader [-h] -pu PLAYLIST_URL -of OUTPUT_FILE [-hh HTTP_HEADERS]
+usage: playlist_downloader [-h] -pu PLAYLIST_URL -of OUTPUT_FILE [-hh HTTP_HEADERS] [-mw MAX_WORKERS] [-nv]
+                           [-rt RESOLUTION]
 
 options:
   -h, --help            show this help message and exit
-  -pu PLAYLIST_URL, --playlist-url PLAYLIST_URL
+  -pu, --playlist-url PLAYLIST_URL
                         The url to the HLS playlist file
-  -of OUTPUT_FILE, --output-file OUTPUT_FILE
+  -of, --output-file OUTPUT_FILE
                         The name of the output video file
-  -hh HTTP_HEADERS, --http-headers HTTP_HEADERS
+  -hh, --http-headers HTTP_HEADERS
                         The headers provided to the server
+  -mw, --max-workers MAX_WORKERS
+                        The maximum number of download workers
+  -nv, --no-verify      Disable TLS certificate verification
+  -rt, --resolution RESOLUTION
+                        Select variant by resolution (WxH)
 ```
 
 ### Pattern-Downloader
