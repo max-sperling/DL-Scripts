@@ -11,13 +11,14 @@ import threading
 import subprocess
 
 class Playlist_Dler:
-    def __init__(self, playlist_url, output_file, http_headers, max_workers, do_verify, resolution):
+    def __init__(self, playlist_url, output_file, http_headers, max_workers, resolution, do_verify, be_verbose):
         self.playlist_url = playlist_url
         self.output_file = output_file
         self.http_headers = http_headers
         self.max_workers = max_workers
-        self.do_verify = do_verify
         self.resolution = resolution
+        self.do_verify = do_verify
+        self.be_verbose = be_verbose
 
     def download_playlist(self):
         self.playlist_file = weblinks.get_url_file(self.playlist_url)
@@ -41,11 +42,6 @@ class Playlist_Dler:
             general.print_message_nok(f"Download failed: {self.playlist_url}, {e}")
             successful = False
 
-        if successful:
-            general.print_message_ok("Playlist file download successful")
-        else:
-            general.print_message_nok("Playlist file download failed")
-
         return successful
 
     def download_media_playlist_file(self):
@@ -54,14 +50,17 @@ class Playlist_Dler:
 
         variants = playlist.parse_master_playlist(self.playlist_file)
         if not variants:
-            general.print_message_info("Media playlist detected")
+            general.print_message_ok("Media playlist download successful")
             return True
 
-        general.print_message_info("Master playlist detected - available resolutions:")
-        for v in variants:
-            res = v.get('RESOLUTION', 'unknown')
-            uri = v.get('URI', '')
-            general.print_message_info(f"  resolution={res}, uri={uri}")
+        general.print_message_ok("Master playlist download successful")
+
+        if self.be_verbose:
+            general.print_message_info("Available resolutions:")
+            for v in variants:
+                res = v.get('RESOLUTION', 'unknown')
+                uri = v.get('URI', 'unknown')
+                general.print_message_info(f"  resolution={res}, uri={uri}")
 
         if not self.resolution:
             general.print_message_nok("No resolution selected. Re-run with --resolution WxH.")
@@ -74,13 +73,16 @@ class Playlist_Dler:
 
         variant_uri = chosen.get('URI')
         variant_uri = weblinks.join_url(self.playlist_url, variant_uri)
-        general.print_message_info(f"Selected variant url: {variant_uri}")
+
+        if self.be_verbose:
+            general.print_message_info(f"Selected media playlist: {variant_uri}")
 
         self.playlist_url = variant_uri
         self.playlist_file = weblinks.get_url_file(self.playlist_url)
         if not self.download_playlist_file(self.playlist_file):
             return False
 
+        general.print_message_ok("Media playlist download successful")
         return True
 
     def download_media_files(self):
@@ -168,14 +170,20 @@ class Playlist_Dler:
         try:
             file_name, _ = self.output_file.rsplit('.')
             parts = ""
+
+            if self.be_verbose:
+                verbosity_args = []
+            else:
+                verbosity_args = ["-loglevel", "warning"]
+
             for idx, row in enumerate(ary):
                 part = f"{file_name}_part{idx}.ts"
-                command = ["ffmpeg", "-i", row, "-c", "copy", part]
+                command = ["ffmpeg", *verbosity_args, "-i", row, "-c", "copy", part]
                 subprocess.run(command, check = True)
                 parts += f"{part}|"
             parts = f"concat:{parts}"
             parts = parts.rstrip('|')
-            command = ["ffmpeg", "-i", parts, "-c", "copy", self.output_file]
+            command = ["ffmpeg", *verbosity_args, "-i", parts, "-c", "copy", self.output_file]
             subprocess.run(command, check = True)
         except Exception as e:
             general.print_message_nok(f"Media files concatenation failed ({e})")
@@ -186,6 +194,7 @@ class Playlist_Dler:
 
 def main():
     parser = argparse.ArgumentParser()
+
     parser.add_argument('-pu', '--playlist-url', type = str,
                         help = 'The url to the HLS playlist file',
                         required = True)
@@ -198,21 +207,26 @@ def main():
     parser.add_argument('-mw', '--max-workers', type = int,
                         help = 'The maximum number of download workers',
                         required = False, default = 10)
-    parser.add_argument('-nv', '--no-verify', dest = 'do_verify', action = 'store_false',
-                        help = 'Disable TLS certificate verification',
-                        required = False, default = True)
     parser.add_argument('-rt', '--resolution', type = str,
                         help = 'Select variant by resolution (WxH)',
                         required = False, default = "")
+
+    parser.add_argument('-nv', '--no-verify', dest = 'do_verify', action = 'store_false',
+                        help = 'Disable TLS certificate verification',
+                        required = False, default = True)
+    parser.add_argument('-v', '--verbose', dest='be_verbose', action='store_true',
+                        help = 'Print provided arguments', required = False, default = False)
+
     args = parser.parse_args()
 
-    general.print_message_info("Provided arguments:")
-    general.print_message_info(f"  playlist_url: {args.playlist_url}")
-    general.print_message_info(f"  output_file: {args.output_file}")
-    general.print_message_info(f"  http_headers : {args.http_headers}")
-    general.print_message_info(f"  max_workers: {args.max_workers}")
-    general.print_message_info(f"  do_verify : {args.do_verify}")
-    general.print_message_info(f"  resolution : {args.resolution}")
+    if args.be_verbose:
+        general.print_message_info("Provided arguments:")
+        general.print_message_info(f"  playlist_url: {args.playlist_url}")
+        general.print_message_info(f"  output_file: {args.output_file}")
+        general.print_message_info(f"  http_headers : {args.http_headers}")
+        general.print_message_info(f"  max_workers: {args.max_workers}")
+        general.print_message_info(f"  do_verify : {args.do_verify}")
+        general.print_message_info(f"  resolution : {args.resolution}")
 
     if args.http_headers:
         parsed_headers = ast.literal_eval(args.http_headers)
@@ -220,7 +234,7 @@ def main():
         parsed_headers = {}
 
     pl_dler = Playlist_Dler(
-        args.playlist_url, args.output_file, parsed_headers, args.max_workers, args.do_verify, args.resolution)
+        args.playlist_url, args.output_file, parsed_headers, args.max_workers, args.resolution, args.do_verify, args.be_verbose)
     successful = pl_dler.download_playlist()
 
     if successful:
