@@ -1,4 +1,4 @@
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urljoin, urlparse, urlunparse
 import os
 
 def url_is_file(url):
@@ -27,23 +27,5 @@ def get_url_path_args(url):
     parsed_url = urlparse(url)
     return urlunparse(('', '', parsed_url.path, '', parsed_url.query, ''))
 
-class Url_Overlap:
-    DIRS = "dirs"  # Base and dirs match
-    BASE = "base"  # Only the base matches
-    NONE = "none"  # Nothing matches
-
-    @staticmethod
-    def calculate(url1, url2):
-        parsed_url1 = urlparse(url1)
-        parsed_url2 = urlparse(url2)
-
-        if ((parsed_url1.scheme == parsed_url2.scheme or parsed_url1.scheme == "" or parsed_url2.scheme == "") and
-            (parsed_url1.netloc == parsed_url2.netloc or parsed_url1.netloc == "" or parsed_url2.netloc == "")):
-            url1_dirs = os.path.dirname(parsed_url1.path)
-            url2_dirs = os.path.dirname(parsed_url2.path)
-            if (url1_dirs == url2_dirs or url1_dirs == "" or url2_dirs == ""):
-                return Url_Overlap.DIRS
-            else:
-               return Url_Overlap.BASE
-        else:
-            return Url_Overlap.NONE
+def join_url(url_1, url_2):
+    return urljoin(url_1, url_2)

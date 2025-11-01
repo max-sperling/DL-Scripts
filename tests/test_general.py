@@ -1,6 +1,5 @@
 from utils import general
 
-import platform
 import subprocess
 import unittest
 

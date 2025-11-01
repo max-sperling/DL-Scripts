@@ -9,7 +9,6 @@ import concurrent.futures
 import os
 import threading
 import subprocess
-import urllib.parse
 
 class Playlist_Dler:
     def __init__(self, playlist_url, output_file, http_headers, max_workers, do_verify, resolution):
@@ -74,7 +73,7 @@ class Playlist_Dler:
             return False
 
         variant_uri = chosen.get('URI')
-        variant_uri = urllib.parse.urljoin(self.playlist_url, variant_uri)
+        variant_uri = weblinks.join_url(self.playlist_url, variant_uri)
         general.print_message_info(f"Selected variant url: {variant_uri}")
 
         self.playlist_url = variant_uri
@@ -86,7 +85,6 @@ class Playlist_Dler:
 
     def download_media_files(self):
         media_files = []
-        base_url = ""
 
         with open(self.playlist_file, 'r') as file:
             for line in file:
@@ -98,27 +96,10 @@ class Playlist_Dler:
             general.print_message_nok("No media files found in playlist")
             return False
 
-        self.url_overlap = weblinks.Url_Overlap.calculate(self.playlist_url, media_files[0])
-        match self.url_overlap:
-            case weblinks.Url_Overlap.DIRS:
-                general.print_message_ok("Calculated url overlap: DIRS")
-                base_url = weblinks.get_url_base_dirs(self.playlist_url)
-                for i in range(len(media_files)):
-                    media_files[i] = weblinks.get_url_file_args(media_files[i])
-            case weblinks.Url_Overlap.BASE:
-                general.print_message_ok("Calculated url overlap: BASE")
-                base_url = weblinks.get_url_base(self.playlist_url)
-                for i in range(len(media_files)):
-                    media_files[i] = weblinks.get_url_path_args(media_files[i])
-            case weblinks.Url_Overlap.NONE:
-                general.print_message_ok("Calculated url overlap: NONE")
-                # nothing to do
-            case _:
-                general.print_message_nok("Calculated url overlap: Unknown")
-                return False
+        for i in range(len(media_files)):
+            media_files[i] = weblinks.join_url(self.playlist_url, media_files[i])
 
-        successful = self.download_files(base_url, media_files)
-
+        successful = self.download_files(media_files)
         if successful:
             general.print_message_ok("Media files download successful")
         else:
@@ -126,25 +107,18 @@ class Playlist_Dler:
 
         return successful
 
-    def download_files(self, base_url, rel_urls):
+    def download_files(self, file_urls):
         successful = True
         lock = threading.Lock()
-        self.urls_are_files = weblinks.url_is_file(rel_urls[0])
+        self.urls_are_files = weblinks.url_is_file(file_urls[0])
 
-        def download_task(rel_url_wa):
+        def download_task(file_url):
             nonlocal successful
 
-            file_url = ""
-            if base_url == "":
-                file_url = rel_url_wa
-            else:
-                file_url = f"{base_url}/{rel_url_wa}"
-
-            file = ""
             if self.urls_are_files:
-                file = weblinks.get_url_file(rel_url_wa)
+                file = weblinks.get_url_file(file_url)
             else: # folders
-                file = f"{general.get_hashed_text(rel_url_wa)}.ts"
+                file = f"{general.get_hashed_text(file_url)}.ts"
 
             file_path = os.path.join(os.getcwd(), file)
 
@@ -160,7 +134,7 @@ class Playlist_Dler:
                     successful = False
 
         with concurrent.futures.ThreadPoolExecutor(max_workers = self.max_workers) as executor:
-            executor.map(download_task, rel_urls)
+            executor.map(download_task, file_urls)
 
         return successful
 
@@ -176,13 +150,8 @@ class Playlist_Dler:
                     if self.urls_are_files:
                         line = weblinks.get_url_file(line)
                     else: # folders
-                        match self.url_overlap:
-                            case weblinks.Url_Overlap.DIRS:
-                                line = f"{general.get_hashed_text(weblinks.get_url_file_args(line))}.ts"
-                            case weblinks.Url_Overlap.BASE:
-                                line = f"{general.get_hashed_text(weblinks.get_url_path_args(line))}.ts"
-                            case weblinks.Url_Overlap.NONE:
-                                line = f"{general.get_hashed_text(line)}.ts"
+                        file_url = weblinks.join_url(self.playlist_url, line)
+                        line = f"{general.get_hashed_text(file_url)}.ts"
 
                     if len(row) <= max_len:
                         row += f"{line}|"
