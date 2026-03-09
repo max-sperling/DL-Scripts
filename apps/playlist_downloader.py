@@ -11,7 +11,7 @@ import threading
 import subprocess
 
 class Playlist_Dler:
-    def __init__(self, playlist_url, output_file, http_headers, max_workers, resolution, do_verify, be_verbose):
+    def __init__(self, playlist_url, output_file, http_headers, max_workers, resolution, do_verify, be_verbose, discard_corrupt):
         self.playlist_url = playlist_url
         self.output_file = output_file
         self.http_headers = http_headers
@@ -19,6 +19,7 @@ class Playlist_Dler:
         self.resolution = resolution
         self.do_verify = do_verify
         self.be_verbose = be_verbose
+        self.discard_corrupt = discard_corrupt
 
     def download_playlist(self):
         self.playlist_file = weblinks.get_url_file(self.playlist_url)
@@ -176,14 +177,19 @@ class Playlist_Dler:
             else:
                 verbosity_args = ["-loglevel", "warning"]
 
+            if self.discard_corrupt:
+                corruption_args = ["-fflags", "+discardcorrupt"]
+            else:
+                corruption_args = []
+
             for idx, row in enumerate(ary):
                 part = f"{file_name}_part{idx}.ts"
-                command = ["ffmpeg", *verbosity_args, "-i", row, "-c", "copy", part]
+                command = ["ffmpeg", *verbosity_args, *corruption_args, "-i", row, "-c", "copy", part]
                 subprocess.run(command, check = True)
                 parts += f"{part}|"
             parts = f"concat:{parts}"
             parts = parts.rstrip('|')
-            command = ["ffmpeg", *verbosity_args, "-i", parts, "-c", "copy", self.output_file]
+            command = ["ffmpeg", *verbosity_args, *corruption_args, "-i", parts, "-c", "copy", self.output_file]
             subprocess.run(command, check = True)
         except Exception as e:
             general.print_message_nok(f"Media files concatenation failed ({e})")
@@ -211,11 +217,15 @@ def main():
                         help = 'Select variant by resolution (WxH)',
                         required = False, default = "")
 
+    parser.add_argument('-dc', '--discard-corrupt', dest = 'discard_corrupt', action = 'store_true',
+                        help = 'Discard corrupted media files',
+                        required = False, default = False)
     parser.add_argument('-nv', '--no-verify', dest = 'do_verify', action = 'store_false',
                         help = 'Disable TLS certificate verification',
                         required = False, default = True)
     parser.add_argument('-v', '--verbose', dest='be_verbose', action='store_true',
-                        help = 'Print provided arguments', required = False, default = False)
+                        help = 'Print provided arguments',
+                        required = False, default = False)
 
     args = parser.parse_args()
 
@@ -234,7 +244,7 @@ def main():
         parsed_headers = {}
 
     pl_dler = Playlist_Dler(
-        args.playlist_url, args.output_file, parsed_headers, args.max_workers, args.resolution, args.do_verify, args.be_verbose)
+        args.playlist_url, args.output_file, parsed_headers, args.max_workers, args.resolution, args.do_verify, args.be_verbose, args.discard_corrupt)
     successful = pl_dler.download_playlist()
 
     if successful:
