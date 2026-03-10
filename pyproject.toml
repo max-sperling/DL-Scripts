@@ -8,7 +8,7 @@ version = "0.1"
 dependencies = ["requests"]
 
 [tool.setuptools]
-packages = ["apps", "utils"]
+packages = ["apps", "playlist_dler", "utils"]
 
 [project.scripts]
 playlist_downloader = "apps.playlist_downloader:main"
