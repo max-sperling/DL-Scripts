@@ -20,8 +20,8 @@ $ pip uninstall dl-scripts
 
 ```
 $ playlist_downloader -h
-usage: playlist_downloader [-h] -pu PLAYLIST_URL -of OUTPUT_FILE [-hh HTTP_HEADERS] [-mw MAX_WORKERS] [-nv]
-                           [-rt RESOLUTION]
+usage: playlist_downloader [-h] -pu PLAYLIST_URL -of OUTPUT_FILE [-hh HTTP_HEADERS] [-mw MAX_WORKERS] [-rt RESOLUTION]
+                           [-f] [-nv] [-v]
 
 options:
   -h, --help            show this help message and exit
@@ -33,9 +33,11 @@ options:
                         The headers provided to the server
   -mw, --max-workers MAX_WORKERS
                         The maximum number of download workers
-  -nv, --no-verify      Disable TLS certificate verification
   -rt, --resolution RESOLUTION
                         Select variant by resolution (WxH)
+  -f, --force           Forces the video concat even with gaps
+  -nv, --no-verify      Disable TLS certificate verification
+  -v, --verbose         Prints all the details
 ```
 
 ### Pattern-Downloader
